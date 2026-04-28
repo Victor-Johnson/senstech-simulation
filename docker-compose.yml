@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  allpix:
+    image: gitlab-registry.cern.ch/allpix-squared/allpix-squared
+    container_name: allpix-squared-sim
+    volumes:
+      - ./simulation:/data/simulation
+      - ./data:/data/output
+    working_dir: /data
+    stdin_open: true
+    tty: true 
+
