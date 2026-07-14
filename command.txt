@@ -1,1 +1,0 @@
-Starting command for the repo to begin the docker container -> docker compose run allpix bash

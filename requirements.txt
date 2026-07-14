@@ -1,0 +1,11 @@
+# Python analysis environment (the simulation itself runs in Docker — see README)
+numpy
+pandas
+scipy
+matplotlib
+scikit-learn
+uproot          # reads Allpix² ROOT output without a ROOT install
+awkward
+spekpy          # X-ray tube spectrum model, used by scripts/make_spectrum.py
+python-docx     # report generation
+jupyterlab
