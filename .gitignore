@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+anaconda_projects/
+
+# Simulation data & outputs (too large for git — see data/README.md)
+*.root
+data/*
+!data/README.md
+!data/*_run_manifest.csv
+output/
+simulation/output/
+
+# Generated document build artifacts
+.docx_build_*/
+
+# Agent / tooling scratch dirs
+.agents/
+.codex/
+.claude/
+
+# OS / editor junk
+*Zone.Identifier
+.DS_Store
+
+# Notes
+notes/
+analysis/results/
+analysis/reports/
+analysis/notebooks/images/
