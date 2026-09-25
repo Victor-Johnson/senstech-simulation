@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   allpix:
-    image: gitlab-registry.cern.ch/allpix-squared/allpix-squared
+    image: gitlab-registry.cern.ch/allpix-squared/allpix-squared@sha256:dac271d7bcaee5950583be390c3acc3ec95c3d9f51b433a0c76cfe4044b38d59
     container_name: allpix-squared-sim
     volumes:
       - ./simulation:/data/simulation
