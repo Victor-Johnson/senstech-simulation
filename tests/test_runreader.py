@@ -1,9 +1,3 @@
-"""Reader contracts, including the uproot-version tripwires.
-
-If a future uproot fixes the TProfile/TProfile2D bugs, the two tripwire tests
-fail. That is deliberate: the workaround in runreader must then be removed on
-purpose, rather than silently shifting every profile bin by one.
-"""
 from __future__ import annotations
 
 import numpy as np

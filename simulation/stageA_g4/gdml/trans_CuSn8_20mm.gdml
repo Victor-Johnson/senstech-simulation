@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+<define/>
+<materials><material name="CuSn8" state="solid"><D value="8.8" unit="g/cm3"/><fraction n="0.918" ref="G4_Cu"/><fraction n="0.08" ref="G4_Sn"/><fraction n="0.002" ref="G4_P"/></material></materials>
+<solids><box name="WorldS" x="400" y="400" z="400" lunit="mm"/><box name="ObjectS" x="200" y="200" z="20" lunit="mm"/><box name="PlaneS" x="200" y="200" z="0.001" lunit="mm"/></solids>
+<structure>
+<volume name="Object"><materialref ref="CuSn8"/><solidref ref="ObjectS"/></volume>
+<volume name="Plane"><materialref ref="G4_Galactic"/><solidref ref="PlaneS"/></volume>
+<volume name="World"><materialref ref="G4_Galactic"/><solidref ref="WorldS"/>
+ <physvol name="Object"><volumeref ref="Object"/><position name="op" x="0" y="0" z="0" unit="mm"/></physvol>
+ <physvol name="Plane"><volumeref ref="Plane"/><position name="pp" x="0" y="0" z="100" unit="mm"/></physvol>
+</volume>
+</structure>
+<setup name="Default" version="1.0"><world ref="World"/></setup>
+</gdml>

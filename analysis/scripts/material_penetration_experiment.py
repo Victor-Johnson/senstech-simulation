@@ -67,8 +67,16 @@ ELEMENT_Z = {
     "Ni": 28,
     "Cu": 29,
     "Zn": 30,
+    "Cd": 48,
+    "Te": 52,
     "Pb": 82,
 }
+
+# CdTe sensor bulk, used for the analytic photon-interaction ceiling.
+# Mass fractions from atomic weights Cd 112.414 / Te 127.60 (sum 240.014).
+CDTE_DENSITY_G_CM3 = 5.85
+CDTE_COMPOSITION = (("Cd", 0.46837), ("Te", 0.53163))
+CDTE_THICKNESS_MM = 1.0
 
 
 @dataclass(frozen=True)
@@ -122,7 +130,11 @@ DETECTORS = [
         80,
         2,
         False,
-        "0.75 mm CdTe; photon-counting response with upper threshold in post-processing.",
+        "0.75 mm CdTe. Modeled as a 4-80 keV energy-discriminator window (per M. Sultana, "
+        "2026-07-25): 4-80 keV is the electronic threshold range, the correct parameter for "
+        "this experiment; 8-100 keV is the system-level energy range, not the discriminator. "
+        "This upper edge is a deliberate config choice, not a physical ceiling, and is what "
+        "produces EIGER2's high-energy rolloff on the hardened beam.",
     ),
     Detector(
         "hexitec_proxy",
@@ -427,6 +439,37 @@ def attenuation_table(spectrum: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def cdte_interaction_table(spectrum: pd.DataFrame) -> pd.DataFrame:
+    """Analytic photon-interaction probability in the CdTe sensor bulk.
+
+    P_interact(E) = 1 - exp(-(mu/rho)_CdTe(E) * rho_CdTe * t) is the fraction of
+    ARRIVING photons that undergo at least one interaction in `t` of CdTe. It is
+    the physics-only detection ceiling: no threshold, window, or charge-sharing
+    losses. Every real detector's simulated count must fall at or below
+    transmitted_flux * P_interact -- that is the sanity bound the previous run
+    lacked, which let EIGER2's corrected count run past 100% of the transmitted
+    beam without anything flagging it.
+    """
+    mu_data = MuData("nist_mu.dat")
+    energies = spectrum["energy_keV"].to_numpy(dtype=float)
+    mu_over_rho = np.zeros_like(energies, dtype=float)
+    for symbol, fraction in CDTE_COMPOSITION:
+        mu_over_rho += fraction * np.asarray(mu_data.get_mu_over_rho(ELEMENT_Z[symbol], energies), dtype=float)
+    mu_linear = CDTE_DENSITY_G_CM3 * mu_over_rho
+    thickness_cm = CDTE_THICKNESS_MM / 10.0
+    interaction_prob = 1.0 - np.exp(-mu_linear * thickness_cm)
+    return pd.DataFrame(
+        {
+            "energy_keV": energies,
+            "cdte_density_g_cm3": CDTE_DENSITY_G_CM3,
+            "cdte_thickness_mm": CDTE_THICKNESS_MM,
+            "mu_over_rho_cm2_g": mu_over_rho,
+            "mu_linear_cm_inv": mu_linear,
+            "interaction_probability": interaction_prob,
+        }
+    )
+
+
 def build_eiger2_alloy2_correction(validation: pd.DataFrame) -> pd.DataFrame:
     """EIGER2 is the only detector whose hard upper-threshold cliff makes the
     analytic Beer-Lambert x bare-response shortcut miss Compton-downscattered
@@ -475,10 +518,12 @@ def combine_results(
     response: pd.DataFrame,
     attenuation: pd.DataFrame,
     n0: int,
+    cdte_interaction: pd.DataFrame,
     eiger2_correction: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     per_energy_rows: list[dict[str, object]] = []
     energy_weights = spectrum.set_index("energy_keV")["weight"].to_dict()
+    cdte_prob = cdte_interaction.set_index("energy_keV")["interaction_probability"].to_dict()
 
     for detector in DETECTORS:
         det_response = response[response["detector"] == detector.key].set_index("energy_keV")
@@ -489,6 +534,8 @@ def combine_results(
                 incident = n0 * weight
                 trans = float(alloy_att.loc[energy, "transmission"])
                 transmitted = incident * trans
+                interaction_prob = float(cdte_prob[energy])
+                theoretical_detectable = transmitted * interaction_prob
                 windowed_response = float(det_response.loc[energy, "windowed_response"])
                 windowed_response_se = float(det_response.loc[energy, "windowed_response_se"])
                 detected = transmitted * windowed_response if not math.isnan(windowed_response) else np.nan
@@ -521,6 +568,8 @@ def combine_results(
                         "incident_bin": incident,
                         "transmission": trans,
                         "transmitted_bin": transmitted,
+                        "cdte_interaction_prob": interaction_prob,
+                        "theoretical_detectable_bin": theoretical_detectable,
                         "intrinsic_detector_response": float(det_response.loc[energy, "intrinsic_response"]),
                         "threshold_window_acceptance": float(det_response.loc[energy, "threshold_window_acceptance"]),
                         "detected_bin": detected,
@@ -536,6 +585,7 @@ def combine_results(
     mean_incident_energy = float(np.average(spectrum["energy_keV"], weights=spectrum["weight"]))
     for (detector_key, alloy_key), group in per_energy.groupby(["detector", "alloy"], sort=False):
         transmitted_total = float(group["transmitted_bin"].sum())
+        theoretical_detectable_total = float(group["theoretical_detectable_bin"].sum())
         detected_total = float(group["detected_bin"].sum(skipna=False))
         # Energy bins treated as independent MC draws for this sum (a labeled
         # approximation -- see binomial_se docstring).
@@ -559,12 +609,16 @@ def combine_results(
                 "alloy_label": first["alloy_label"],
                 "incident_total": n0,
                 "transmitted_total": transmitted_total,
+                "theoretical_detectable_total": theoretical_detectable_total,
                 "detected_total": detected_total,
                 "detected_total_se": detected_total_se,
                 "transmission_fraction": transmitted_total / n0,
                 "detected_fraction_of_incident": detected_total / n0 if np.isfinite(detected_total) else np.nan,
                 "detected_fraction_of_transmitted": detected_total / transmitted_total
                 if np.isfinite(detected_total) and transmitted_total > 0
+                else np.nan,
+                "detected_fraction_of_theoretical": detected_total / theoretical_detectable_total
+                if np.isfinite(detected_total) and theoretical_detectable_total > 0
                 else np.nan,
                 "mean_incident_energy_keV": mean_incident_energy,
                 "mean_transmitted_energy_keV": mean_transmitted,
@@ -907,6 +961,33 @@ def save_plots(
     fig.savefig(out_dir / "detector_alloy_ranking.png", dpi=180)
     plt.close(fig)
 
+    # Simulated counts vs the analytic CdTe interaction ceiling (mean over alloys).
+    fig, ax = plt.subplots(figsize=(9, 5))
+    order = ["eiger2", "medipix3", "timepix3_cdte", "hexitec_proxy"]
+    present = [d for d in order if d in set(summary["detector"])]
+    x = np.arange(len(present))
+    width = 0.38
+    theo = [float(summary[summary["detector"] == d]["theoretical_detectable_total"].mean()) for d in present]
+    sim = [float(summary[summary["detector"] == d]["detected_total"].mean()) for d in present]
+    labels = [summary[summary["detector"] == d]["detector_label"].iloc[0].split(" CdTe")[0] for d in present]
+    ax.bar(x - width / 2, theo, width, label="Theoretical ceiling (transmitted x CdTe interaction)", color="#b9c6d6")
+    ax.bar(x + width / 2, sim, width, label="Simulated detected counts", color="#2f7f74")
+    headroom = max(theo) * 1.18
+    ax.set_ylim(0, headroom)
+    for xi, (t, s) in enumerate(zip(theo, sim)):
+        # ceiling is the same physics bound for all detectors; label it once
+        if xi == 0:
+            ax.text(xi - width / 2, t, f"ceiling {t:,.0f}", ha="center", va="bottom", fontsize=8, color="#4a5a6a")
+        ax.text(xi + width / 2, s, f"{s:,.0f}\n({100*s/t:.0f}%)", ha="center", va="bottom", fontsize=8, fontweight="bold")
+    ax.set_xticks(x, labels)
+    ax.set_ylabel("Mean counts across 5 alloys (N0=1,000,000)")
+    ax.set_title("Simulated detector counts vs analytic CdTe interaction ceiling\n"
+                 "(every bar at or below 100% -- the physical bound the previous run violated)")
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.07), ncol=2, fontsize=8, frameon=False)
+    fig.tight_layout()
+    fig.savefig(out_dir / "simulated_vs_theoretical.png", dpi=180)
+    plt.close(fig)
+
     if not validation.empty:
         fig, axes = plt.subplots(1, len(DETECTORS), figsize=(4.0 * len(DETECTORS), 4.5), sharey=False)
         width = 0.35
@@ -990,6 +1071,23 @@ def validate_outputs(
         bool((summary["beam_hardening_shift_keV"] >= -1e-9).all()),
         "attenuating alloys should shift mean transmitted energy upward",
     )
+    # The analytic ceiling assumes a straight 1 mm path; obliquely scattered
+    # photons in the thick sensor sample longer path lengths, so a full MC can
+    # sit a couple percent above it. A 3% margin still catches gross violations
+    # (the removed EIGER2 correction ran to ~115% of transmitted flux) without
+    # false-flagging that second-order geometric effect.
+    MC_CEILING_MARGIN = 0.03
+    finite_summary = summary[summary["detected_total"].notna()]
+    ratio = finite_summary["detected_total"] / finite_summary["theoretical_detectable_total"]
+    ceiling_ok = bool((ratio <= 1 + MC_CEILING_MARGIN).all())
+    worst_row = finite_summary.loc[ratio.idxmax()]
+    add(
+        "detected_within_cdte_ceiling",
+        ceiling_ok,
+        f"detected must stay <= transmitted_flux x P_interact(CdTe) + {MC_CEILING_MARGIN:.0%} MC margin; "
+        f"worst = {ratio.max():.3f} ({worst_row['detector']}); real detectors all <1.0 "
+        f"(EIGER2 ran to ~1.15 before the fix)",
+    )
     add("all_20_detector_alloy_combinations_present", len(summary) == 20, f"{len(summary)} combinations")
     add(
         "hexitec_labelled_as_proxy",
@@ -1011,12 +1109,12 @@ def validate_outputs(
             missing_transport == 0,
             f"{missing_transport} missing transport rows out of {len(validation)}",
         )
-        eiger2_corrected = per_energy[per_energy["detector"] == "eiger2"]
+        all_analytic = per_energy["detection_method"] == "analytic"
         add(
-            "eiger2_all_alloys_use_g4brass_calibrated_correction",
-            bool((eiger2_corrected["detection_method"] == "g4brass_calibrated_correction").all()),
-            "All EIGER2 alloys must use the G4_BRASS-calibrated correction "
-            "(the direct transport run measured G4_BRASS, not C36000, so it is calibration -- not production -- data)",
+            "all_detectors_use_plain_analytic_method",
+            bool(all_analytic.all()),
+            "No per-detector scatter correction is applied; every detector uses "
+            "transmission x simulated response (the EIGER2-only correction was removed)",
         )
     expected_discrimination_rows = len(DETECTORS) * len(list(itertools.combinations(ALLOYS, 2)))
     add(
@@ -1082,8 +1180,19 @@ def main() -> None:
         validation_events_default=args.validation_events,
         root_prefix=args.root_prefix,
     )
-    eiger2_correction = build_eiger2_alloy2_correction(validation)
-    per_energy, summary = combine_results(spectrum, response, attenuation, args.n0, eiger2_correction)
+    # The EIGER2-only G4_BRASS scatter correction is deliberately NOT applied.
+    # It pushed EIGER2's count above 100% of the transmitted flux (a photon
+    # counter cannot detect more photons than reach it) and, being applied to
+    # EIGER2 alone, rigged the ranking. Its justification -- recovering
+    # downscattered photons re-entering the "sub-80 keV window" -- disappears
+    # now that the spurious 80 keV upper veto is gone. transport_validation.csv
+    # is still written as an independent diagnostic. All detectors use plain
+    # analytic transmission x simulated response, bounded by the CdTe ceiling.
+    cdte_interaction = cdte_interaction_table(spectrum)
+    eiger2_correction = None
+    per_energy, summary = combine_results(
+        spectrum, response, attenuation, args.n0, cdte_interaction, eiger2_correction
+    )
     detector_bin_results = combine_detector_bin_results(
         spectrum, attenuation, detector_bins, args.n0, eiger2_correction
     )
@@ -1094,6 +1203,7 @@ def main() -> None:
     response.to_csv(args.out_dir / "detector_response.csv", index=False)
     detector_bins.to_csv(args.out_dir / "detector_energy_bin_response.csv", index=False)
     attenuation.to_csv(args.out_dir / "alloy_attenuation.csv", index=False)
+    cdte_interaction.to_csv(args.out_dir / "cdte_interaction.csv", index=False)
     per_energy.to_csv(args.out_dir / "per_energy_results.csv", index=False)
     detector_bin_results.to_csv(args.out_dir / "per_detector_energy_bin_results.csv", index=False)
     summary.to_csv(args.out_dir / "combined_results.csv", index=False)

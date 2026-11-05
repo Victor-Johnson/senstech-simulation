@@ -1,0 +1,9 @@
+input,theory,simulation,shared,source
+N0 scaling (1e6 incident photons),yes,yes,True,phase2_selection_experiment.N0
+"Source spectrum w(E), 14 bins",yes,yes,True,spectra/150kvp_weights.csv (SpekPy)
+Alloy transmission T_a(E),yes,yes,True,material_penetration_uniform/alloy_attenuation.csv (NIST via SpekPy)
+Sensor thickness,yes,yes,True,SCENARIOS dict / bare_root_path tag
+"Detector energy window [lo, hi]",yes,yes,True,DETS (framework v3 Table 8/8a)
+CdTe mu (attenuation coefficient),yes,no,False,material_penetration_uniform/cdte_interaction.csv
+P_CdTe(E) = 1 - exp(-mu t)  [analytic],yes,no,False,phase2_selection_experiment.P_cdte()
+R_d(E) bare-detector response  [Monte Carlo],no,yes,False,Allpix ROOT: charge/cluster_charge + event_size_clusters

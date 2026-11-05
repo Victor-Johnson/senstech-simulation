@@ -36,7 +36,57 @@ ONLY_DETECTOR=${ONLY_DETECTOR:-}
 ONLY_ENERGY=${ONLY_ENERGY:-}
 
 mkdir -p "$SCENARIOS"
-printf "mode,detector,energy_keV,n_events,output_name,config_path\n" > "$MANIFEST"
+# Manifest is APPEND-ONLY by default. It used to be truncated on every
+# invocation, which silently destroyed earlier rows when a second batch ran.
+RESET_MANIFEST=${RESET_MANIFEST:-0}
+OUTPUT_TAG=${OUTPUT_TAG:-}
+
+# Provenance passed in from the host wrapper (simulation/run.sh). The driver
+# runs inside the container and cannot inspect its own image.
+RANDOM_SEED=${RANDOM_SEED:-42}
+ALLPIX_IMAGE_REF=${ALLPIX_IMAGE_REF:-unknown}
+ALLPIX_IMAGE_DIGEST=${ALLPIX_IMAGE_DIGEST:-unknown}
+DRIVER_GIT_REV=${DRIVER_GIT_REV:-unknown}
+# Every manifest field goes through this: a newline or comma in any value
+# silently corrupts the CSV, and the values come from external commands.
+csv_safe() { printf '%s' "$1" | tr -d ',\n\r'; }
+
+# `head -1` SIGPIPEs allpix mid-write, which intermittently captured MULTIPLE
+# lines and embedded a newline in the manifest row, splitting it in two. sed -n
+# '1p' consumes the whole stream instead, and tr strips any stray separator.
+ALLPIX_VERSION=$(allpix --version 2>/dev/null | sed -n '1p' | tr -d ',\n' || echo unknown)
+[ -n "$(csv_safe "$ALLPIX_VERSION")" ] || ALLPIX_VERSION=unknown
+
+DRIVER_NAME=$(basename "${BASH_SOURCE[0]}")
+
+MANIFEST_HEADER="mode,detector,energy_keV,n_events,output_name,config_path,campaign,output_tag,sensor_thickness,pixel_pitch,n_pixels,threshold_e,noise_e,bias_V,depletion_V,random_seed,passive_material,alloy,gap_mm,detector_config_path,image_ref,image_digest,allpix_version,driver_name,driver_git_rev,started_utc,finished_utc,status,root_sha256,root_bytes,schema_version,provenance_source"
+
+if [ "$RESET_MANIFEST" = "1" ] || [ ! -f "$MANIFEST" ]; then
+    printf "%s\n" "$MANIFEST_HEADER" > "$MANIFEST"
+fi
+# Upgrade a v1 (6-column) manifest in place before appending v2 rows, otherwise
+# the file becomes ragged and pd.read_csv fails. Legacy rows keep their four
+# real fields and are marked schema_version=1 / provenance_source=legacy so the
+# analysis side can tell reconstructed provenance from recorded provenance.
+migrate_manifest_v1() {
+    [ -f "$MANIFEST" ] || return 0
+    local first
+    first=$(head -1 "$MANIFEST")
+    [ "$first" = "$MANIFEST_HEADER" ] && return 0
+    if [ "$first" = "mode,detector,energy_keV,n_events,output_name,config_path" ]; then
+        echo "Migrating v1 manifest -> v2: $MANIFEST"
+        cp "$MANIFEST" "${MANIFEST%.csv}.v1.bak"
+        {
+            printf "%s\n" "$MANIFEST_HEADER"
+            tail -n +2 "${MANIFEST%.csv}.v1.bak" | awk -F, 'NF>0 {
+                printf "%s", $0
+                for (i = NF; i < 30; i++) printf ","
+                printf ",1,legacy\n"
+            }'
+        } > "$MANIFEST"
+    fi
+}
+migrate_manifest_v1
 
 ENERGIES=(20 30 40 50 60 70 80 90 100 110 120 130 140 150)
 if [ -n "${VALIDATION_ENERGIES_OVERRIDE:-}" ]; then
@@ -180,7 +230,7 @@ write_sim_config() {
 log_level = "WARNING"
 number_of_events = ${n_events}
 detectors_file = "${det_config}"
-random_seed = 42
+random_seed = ${RANDOM_SEED}
 
 [GeometryBuilderGeant4]
 world_material = "air"
@@ -226,14 +276,49 @@ write_and_run() {
     local include_brass=$5
     local output_name=$6
 
-    local det_config=$SCENARIOS/detector_${chip}_${mode}.conf
+    # OUTPUT_TAG must be part of the detector config name, or thickness
+    # variants overwrite each other's geometry record.
+    local det_config=$SCENARIOS/detector_${chip}_${mode}${OUTPUT_TAG}.conf
     local sim_config=$SCENARIOS/${output_name}.conf
 
     write_detector_config "$chip" "$det_config" "$include_brass"
     write_sim_config "$chip" "$energy" "$n_events" "$output_name" "$det_config" "$sim_config"
 
-    printf "%s,%s,%s,%s,%s,%s\n" "$mode" "$chip" "$energy" "$n_events" "$output_name" "$sim_config" >> "$MANIFEST"
-    run_sim "$sim_config" "$output_name"
+    local alloy="" passive=""
+    if [ "$include_brass" != "0" ] && [ -n "$include_brass" ]; then
+        alloy="$include_brass"
+        passive="${ALLOY_MATERIAL[$include_brass]}"
+    fi
+
+    # A dry run generates configs and simulates nothing, so it must not append
+    # a manifest row -- that would record a run that never happened as ok.
+    if [ "$DRY_RUN" = "1" ]; then
+        echo "DRY_RUN=1: wrote $sim_config (no simulation, no manifest row)"
+        return 0
+    fi
+
+    # Run FIRST, then record. The row used to be written before the simulation,
+    # so a failed run left a row claiming success.
+    local started finished status=ok
+    started=$(date -u +%FT%TZ)
+    run_sim "$sim_config" "$output_name" || status=failed
+    finished=$(date -u +%FT%TZ)
+
+    local rsha="" rbytes=""
+    if [ -f "$OUTPUT/${output_name}.root" ]; then
+        rsha=$(sha256sum "$OUTPUT/${output_name}.root" | cut -d' ' -f1)
+        rbytes=$(stat -c%s "$OUTPUT/${output_name}.root")
+    fi
+
+    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+        "$mode" "$chip" "$energy" "$n_events" "$output_name" "$sim_config" \
+        "material_penetration" "$OUTPUT_TAG" "${THICK[$chip]}" "${PITCH[$chip]}" "${NPIX[$chip]// /x}" \
+        "${THRESH[$chip]}" "${NOISE[$chip]}" "${BIAS[$chip]}" "${DEPL[$chip]}" "$RANDOM_SEED" \
+        "$passive" "$alloy" "${GAP_MM:-0}" "$det_config" \
+        "$(csv_safe "$ALLPIX_IMAGE_REF")" "$(csv_safe "$ALLPIX_IMAGE_DIGEST")" "$(csv_safe "$ALLPIX_VERSION")" "$(csv_safe "$DRIVER_NAME")" "$(csv_safe "$DRIVER_GIT_REV")" \
+        "$started" "$finished" "$status" "$rsha" "$rbytes" "2" "driver" >> "$MANIFEST"
+
+    [ "$status" = ok ] || return 1
 }
 
 if [ "$RUN_BARE" = "1" ]; then
