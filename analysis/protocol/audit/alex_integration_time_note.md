@@ -1,6 +1,10 @@
 # Integration-time fix: what changed (for Alex)
 
-**The material-penetration ranking changes: Medipix3 and Timepix3 are now level, and EIGER2 is still last.** Before the fix, Medipix3 led Timepix3 by 9,546 counts (95% CI ±778). After it, the gap is 77 ± 763, so the two are level within simulation statistics. The cause was a setting in our earlier simulations. Allpix stops following the sensor charge after 25 ns by default. In 1 mm CdTe at −300 V to −400 V, electrons need about 26–32 ns to cross the sensor, so some charge was cut off and some photons were missed or under-measured. This hit Timepix3 (−300 V) hardest. We re-ran every affected configuration with 1 µs. Only configurations whose crossing time is over 25 ns changed: 94 of 94 such runs with counts moved, and 0 of 99 runs under 25 ns did. This includes EIGER2 at 0.75 mm and −375 V, which is unchanged. EIGER2's last place depends on treating 80 keV as a hard upper cut; see the separate note.
+**With all upper energy edges removed, the three chips are indistinguishable; the old ranking reflects the energy windows, not detector physics.** In the uniform 1 mm CdTe study, removing every upper edge gives Medipix3 92,239, Timepix3 92,668 and EIGER2 92,542 counts (95% CI ±558 each), all at the CdTe absorption limit.
+
+**Within the current windows, fixing a simulation setting also changed the ranking: Medipix3 and Timepix3 are now level, and EIGER2 is still last.** Before the fix, Medipix3 led Timepix3 by 9,546 counts (±778). After it, the gap is 77 ± 763, so the two are level within simulation statistics. The cause: Allpix stops following the sensor charge after 25 ns by default, but electrons in 1 mm CdTe at −300 V to −400 V need about 26–32 ns to cross the sensor. Some charge was cut off, which hit Timepix3 (−300 V) hardest. We re-ran every affected configuration with 1 µs. Only configurations with a crossing time over 25 ns changed: 94 of 94 such runs with counts. None of the 99 faster runs changed, including EIGER2 at 0.75 mm and −375 V.
+
+**EIGER2 sensitivity (old campaign only; EIGER2 is not in the new protocol).** EIGER2's place depends on how photons above 80 keV are treated. Rejected (the 4–80 keV two-threshold window, current): 36,637 ± 407, last. Counted (single-threshold mode, no upper edge): 92,542 ± 558, first, ahead of Medipix3 by 8,005 ± 777. No ruling is made on which mode applies; both are reported.
 
 | Uniform 1 mm study, total counts (5 alloys, 10⁶ photons each) | Before (25 ns) | After (1 µs) | Change |
 |---|---|---|---|
@@ -10,6 +14,8 @@
 | Medipix3 − Timepix3 | 9,546 ± 778 (significant) | 77 ± 763 (level) | |
 
 ± = 95% CI from simulation statistics. Totals are expected counts, so a real measurement would add its own counting noise.
+
+Caveat found on 2026-11-05: the simulated CdTe has density 6.2 g/cm³ (Geant4's G4_CADMIUM_TELLURIDE) instead of the real 5.85. This raises absolute efficiency by about 1% at 70 keV and up to about 6% at 300 keV for every chip alike, so rankings are unaffected but absolute counts are slightly high. A fix is pending a ruling.
 
 **Scope (237 configurations re-run):**
 

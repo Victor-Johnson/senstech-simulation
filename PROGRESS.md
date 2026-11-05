@@ -3,12 +3,14 @@
 Newest entries first. Updated after every task. A new session resumes from **Current state** and **Open issues**.
 See ROADMAP.md (milestones), `analysis/protocol/inputs_register.csv` (inputs) and `analysis/protocol/experiment_register.md` (experiments).
 
-## Current state (2026-11-05, end of session)
+## Current state (2026-11-05, evening)
 
-- **Milestone:** M1 done. ROADMAP written; **waiting for user go-ahead before starting M3**.
-- **Branch:** `protocol-programme`. The last commit (279d194) is step 0 + feasibility; **everything since is uncommitted**.
-- **Background jobs:** none running.
-- **Next task:** M3.1, the timing layer + analytic tests (`analysis/protocol/timing.py`, `tests/test_timing.py`).
+- **STOPPED: ruling needed on PH-24 (Allpix CdTe density 6.2 vs real 5.85 g/cm3)** before M3 compute and the alloy2 transport re-runs.
+- **Branch:** `protocol-programme`, pushed. Commits 02d5e56..3fb2912 = pipeline / audit / tests+CI / docs. CI "tests" run 42092680690: **success**.
+- **Pending (user rulings 2026-11-05):**
+  - item 2: alloy2 split into G4_BRASS / C36000 GDML; relabel 46 files; C36000 transport re-run; erratum; material validation rule. Allpix has a GDML passive model, so this is feasible.
+  - item 5: M3 build.
+- **Background jobs:** none.
 
 ## How to run things
 
@@ -54,6 +56,15 @@ g++ -O2 -o /data/output/protocol_runs/bin/mctrack_depths mctrack_depths.cc $(roo
 
 ## Log
 
+- **2026-11-05 (evening)**
+  - Committed and pushed in 4 commits; CI fast tests pass on GitHub.
+  - Alex note now leads with "upper edges removed -> indistinguishable", plus the EIGER2 sensitivity and the CdTe density caveat.
+  - 70 keV check (`exp1/backscatter_70keV_check.csv`):
+    - with the readout chip, bumps and support removed, efficiency stays 0.927 / 0.926 (LINDA / Medipix3), so this is NOT backscatter;
+    - cause: Allpix CdTe = G4_CADMIUM_TELLURIDE at 6.2 g/cm3; all 180 milestone cells pass against the 6.2 ceiling (max 0.9985 of it);
+    - efficiency inflation vs real 5.85: +1.2% at 70 keV, +3.4% at 100, +5% at 150, +5.7% at 280 keV.
+    - New register row PH-24, NEEDS RULING. Sensor-only models: `simulation/protocol_runs/models/`.
+
 - **2026-11-05**
   - Integration-time audit complete: 237 re-runs, 31 excluded (invalid "before").
     - Ranking change: Medipix3 vs Timepix3 now level (77 ± 763 counts at 95%; was 9,546 ± 778).
@@ -75,7 +86,7 @@ g++ -O2 -o /data/output/protocol_runs/bin/mctrack_depths mctrack_depths.cc $(roo
 
 ## Open issues
 
-1. η exceeds the single-pass XCOM ceiling at 70 keV by ~0.8% (LINDA, Medipix3; ~4σ). Hypothesis: backscatter from the ASIC/support in the Allpix `medipix3` model. Explain in M4.
+1. CLOSED as backscatter, REOPENED as PH-24: the 70 keV excess is the Allpix CdTe density (6.2 vs 5.85 g/cm3), not backscatter. Needs a ruling.
 2. 17 `mpu_transport_*_alloy2` configs now simulate Cu under a brass name (shared detector file regenerated 07-25). Fix needs a decision plus chown of root-owned configs.
 3. Root-owned `simulation/` and `data/` files: `sudo chown -R victor-pc:victor-pc simulation data` (user to run).
 4. `requirements.txt`: the user is resolving local edits; pytest and xraydb are not listed.
