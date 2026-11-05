@@ -1,0 +1,10 @@
+material,composition,rows,grid_points,missing_grid_points,edges,sha256,source,fetched_utc
+Cu,Cu:1.0,291,291,0,,9b680fbc0e9865cd,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:12:18+00:00
+CuZn37,Cu:0.63; Zn:0.37,291,291,0,,dbedd5e0deefa99c,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:12:18+00:00
+CuZn39Pb3,Cu:0.58; Zn:0.39; Pb:0.03,291,291,0,,3d8e01f52cfa6334,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:12:32+00:00
+CuSn8,Cu:0.918; Sn:0.08; P:0.002,291,291,0,,adecd107222c0eeb,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:12:44+00:00
+CuNi10Fe1Mn,Cu:0.875; Ni:0.1; Fe:0.015; Mn:0.01,291,291,0,,fdfa119f282cca08,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:12:59+00:00
+CdTe,Cd:0.46837; Te:0.53163,291,291,0,,e8eeb33442004940,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:13:14+00:00
+CsI,Cs:0.511549; I:0.488451,291,291,0,,87668f9feda2acd0,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:13:26+00:00
+GOS,Gd:0.832; O:0.0847; S:0.0833,291,291,0,,c16c4b11bb7e8f90,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:13:40+00:00
+W,W:1.0,291,291,0,,6188ff0643e733f1,https://physics.nist.gov/cgi-bin/Xcom/xcom3_3,2026-11-05T13:13:53+00:00

@@ -1,0 +1,12 @@
+origin,last_volume,n,per_primary
+primary,none,16570,1.0
+rayleigh,object,749,0.0452021726010863
+rayleigh,belt,14,0.0008449004224502112
+rayleigh,collimator_slit,1,6.0350030175015085e-05
+rayleigh,other,1,6.0350030175015085e-05
+compton,object,157,0.009474954737477368
+compton,belt,52,0.0031382015691007845
+compton,other,2,0.00012070006035003017
+secondary_photon,none,37,0.0022329511164755583
+secondary_photon,object,6,0.0003621001810500905
+secondary_photon,belt,4,0.00024140012070006034

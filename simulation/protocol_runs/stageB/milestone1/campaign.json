@@ -1,0 +1,112 @@
+{
+ "campaign": "milestone1",
+ "detectors": [
+  "linda",
+  "medipix3",
+  "varex"
+ ],
+ "energies": [
+  10.0,
+  20.0,
+  30.0,
+  40.0,
+  50.0,
+  60.0,
+  70.0,
+  80.0,
+  90.0,
+  100.0,
+  110.0,
+  120.0,
+  130.0,
+  140.0,
+  150.0,
+  160.0,
+  170.0,
+  180.0,
+  190.0,
+  200.0,
+  210.0,
+  220.0,
+  230.0,
+  240.0,
+  250.0,
+  260.0,
+  270.0,
+  280.0,
+  290.0,
+  300.0
+ ],
+ "events": 20000,
+ "seed": 101,
+ "detectors_spec": {
+  "linda": {
+   "name": "linda",
+   "pitch_um": 330,
+   "npix": [
+    8,
+    20
+   ],
+   "thickness_um": 1000,
+   "bias_V": -500,
+   "tags": {
+    "pitch": "S",
+    "array": "S",
+    "thickness": "S",
+    "bias": "A (D-L26 TBD, bracket -300..-500)"
+   },
+   "sim_npix": [
+    16,
+    16
+   ],
+   "fid_npix": 4,
+   "beam_margin_um": 100.0
+  },
+  "medipix3": {
+   "name": "medipix3",
+   "pitch_um": 55,
+   "npix": [
+    64,
+    64
+   ],
+   "thickness_um": 1000,
+   "bias_V": -500,
+   "tags": {
+    "pitch": "P",
+    "thickness": "A (protocol)",
+    "bias": "A"
+   },
+   "sim_npix": null,
+   "fid_npix": 16,
+   "beam_margin_um": 100.0
+  },
+  "varex": {
+   "name": "varex",
+   "pitch_um": 100,
+   "npix": [
+    32,
+    32
+   ],
+   "thickness_um": 1000,
+   "bias_V": -500,
+   "tags": {
+    "pitch": "S",
+    "thickness": "A (D-V13 bracket; milestone 1 mm)",
+    "bias": "A"
+   },
+   "sim_npix": null,
+   "fid_npix": 8,
+   "beam_margin_um": 100.0
+  }
+ },
+ "variants_spec": {
+  "base": {}
+ },
+ "fano": 0.24,
+ "transport": {
+  "mu_e": 1090.0,
+  "mu_h": 110.0,
+  "tau_e_ns": 2477.064220183486,
+  "tau_h_ns": 1636.3636363636365
+ }
+}

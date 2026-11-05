@@ -1,0 +1,10 @@
+# Uniform flat beam (review 2026-11-05 item 2): GPS plane source, rectangle, fixed direction +z
+/gps/particle gamma
+/gps/pos/type Plane
+/gps/pos/shape Rectangle
+/gps/pos/centre 0 0 -10 mm
+/gps/pos/halfx 0.5400 mm
+/gps/pos/halfy 0.5400 mm
+/gps/direction 0 0 1
+/gps/ene/type Mono
+/gps/ene/mono 59.54 keV

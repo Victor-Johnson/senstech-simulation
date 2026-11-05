@@ -47,6 +47,18 @@ def scint(kind, t_mm):
 <setup name="Default" version="1.0"><world ref="World"/></setup>
 </gdml>'''
 
+NIST_REF = {"CdTe": "G4_CADMIUM_TELLURIDE", "CsI": "G4_CESIUM_IODIDE", "GOS": "G4_GADOLINIUM_OXYSULFIDE", "W": "G4_W"}
+
+def mu_geom(name):
+    if name in ALLOYS:
+        return trans(name, 5)
+    t = trans("Cu", 5)
+    return (t.replace('<materialref ref="Cu"/><solidref ref="ObjectS"/>', f'<materialref ref="{NIST_REF[name]}"/><solidref ref="ObjectS"/>')
+             .replace(t[t.index("<materials>"):t.index("</materials>") + 12], "<materials/>"))
+
+for n in list(ALLOYS) + list(NIST_REF):
+    (OUT / f"mu_{n}.gdml").write_text(mu_geom(n))
+
 for a in ALLOYS:
     for t in (5, 20):
         (OUT / f"trans_{a}_{t}mm.gdml").write_text(trans(a, t))

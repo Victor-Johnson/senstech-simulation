@@ -1,5 +1,6 @@
 // Feasibility test 4: standalone Geant4 app.
-//   stagea_spike <geometry.gdml> <mode: trans|scint> <E_keV> <n_events> <out.csv> [seed]
+//   stagea_spike <geometry.gdml> <mode: trans|scint|mu> <E_keV> <n_events> <out.csv> [seed]
+// mu: writes Geant4 mu/rho per process for volume "Object", 10-300 keV (E and N ignored).
 // Geometry from GDML (custom alloy mixtures by mass fraction; NIST scintillators).
 // Physics: QGSP_BERT_LIV (Livermore EM), production cut 1 um, fluorescence ON, Auger OFF.
 // trans: pencil beam along +z through volume "Object"; counts photons entering volume "Plane"
@@ -82,6 +83,19 @@ int main(int argc, char** argv) {
   rm->SetUserAction(new Gun); rm->SetUserAction(new Step); rm->SetUserAction(new Evt);
   rm->Initialize();
   gOut.open(argv[5]); if (gMode == "scint") gOut << "event,edep_keV\n";
+  if (gMode == "mu") {  // Geant4's own mu/rho
+    rm->BeamOn(0);       // physics tables are built at run start, not at Initialize() for volume "Object" on a 1 keV grid 10..300 keV (per process)
+    auto mat = G4LogicalVolumeStore::GetInstance()->GetVolume("Object")->GetMaterial();
+    double rho = mat->GetDensity() / (g / cm3);
+    G4EmCalculator c;
+    gOut << "material,density_g_cm3,energy_keV,coherent,incoherent,photoelectric,pair,total_with_coherent\n";
+    for (int e = 10; e <= 300; ++e) {
+      double E = e * keV, v[4]; const char* pr[4] = {"Rayl", "compt", "phot", "conv"}; double tot = 0;
+      for (int i = 0; i < 4; ++i) { v[i] = c.ComputeCrossSectionPerVolume(E, G4Gamma::Definition(), pr[i], mat) * cm / rho; tot += v[i]; }
+      gOut << mat->GetName() << "," << rho << "," << e << "," << v[0] << "," << v[1] << "," << v[2] << "," << v[3] << "," << tot << "\n";
+    }
+    gOut.close(); delete rm; return 0;
+  }
   auto t0 = std::chrono::steady_clock::now();
   rm->BeamOn(N);
   double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();

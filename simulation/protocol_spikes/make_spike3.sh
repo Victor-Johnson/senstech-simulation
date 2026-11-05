@@ -3,13 +3,13 @@
 # Usage: N=1000 bash make_spike3.sh   (variants: simple = GenericPropagation+SimpleTransfer, transient = TransientPropagation+PulseTransfer)
 set -euo pipefail
 N=${N:-1000}
-D=/data/simulation/protocol_spikes; O=/data/output/protocol_spikes
+D=${D:-/data/simulation/protocol_spikes}; O=${O:-/data/output/protocol_spikes}
 for T in 1000 2000; do
   sed "s/sensor_thickness = 1000um/sensor_thickness = ${T}um/; s/\[linda\]/[linda]/" $D/detector_linda_spike.conf > $D/detector_linda_${T}um.conf
 done
 declare -A BIAS=([1000]=-500V [2000]=-1000V); declare -A DEPL=([1000]=-300V [2000]=-600V)
-for T in 1000 2000; do for E in 60 150; do for v in simple transient; do
-  name=spike3_${v}_${T}um_${E}keV_n${N}_cps${CPS:-100}
+for T in 1000 2000; do for E in 60 150; do for v in ${VARIANTS:-simple transient}; do
+  name=spike3_${v}_${T}um_${E}keV_n${N}_cps${CPS:-100}${TAG:-}
   if [ $v = simple ]; then
     TRANSPORT="[GenericPropagation]
 temperature = 293K
@@ -20,7 +20,7 @@ mobility_electron = 1090cm*cm/V/s
 mobility_hole = 110cm*cm/V/s
 trapping_model = \"constant\"
 trapping_time_electron = 2480ns
-trapping_time_hole = 1640ns
+trapping_time_hole = ${TAU_H:-1640ns}
 propagate_holes = true
 
 [SimpleTransfer]
@@ -39,7 +39,7 @@ mobility_electron = 1090cm*cm/V/s
 mobility_hole = 110cm*cm/V/s
 trapping_model = \"constant\"
 trapping_time_electron = 2480ns
-trapping_time_hole = 1640ns
+trapping_time_hole = ${TAU_H:-1640ns}
 distance = 1
 
 [PulseTransfer]"

@@ -1,0 +1,45 @@
+{
+ "campaign": "exp0_v1_am241",
+ "detectors": [
+  "medipix3"
+ ],
+ "energies": [
+  13.9,
+  17.75,
+  20.8,
+  26.34,
+  59.54
+ ],
+ "events": 50000,
+ "seed": 201,
+ "detectors_spec": {
+  "medipix3": {
+   "name": "medipix3",
+   "pitch_um": 55,
+   "npix": [
+    64,
+    64
+   ],
+   "thickness_um": 1000,
+   "bias_V": -500,
+   "tags": {
+    "pitch": "P",
+    "thickness": "A (protocol)",
+    "bias": "A"
+   },
+   "sim_npix": null,
+   "fid_npix": 16,
+   "beam_margin_um": 100.0
+  }
+ },
+ "variants_spec": {
+  "base": {}
+ },
+ "fano": 0.24,
+ "transport": {
+  "mu_e": 1090.0,
+  "mu_h": 110.0,
+  "tau_e_ns": 2477.064220183486,
+  "tau_h_ns": 1636.3636363636365
+ }
+}
