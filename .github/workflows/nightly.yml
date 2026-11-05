@@ -1,0 +1,56 @@
+# Nightly slow tests (`pytest -m slow`), plus the C++ MCTrack reader check inside the pinned Allpix image.
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 2 * * *"     # 02:00 UTC every night
+  workflow_dispatch:
+
+jobs:
+  slow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Slow tests (Python only; the docker test skips here)
+        run: python -m pytest -q -rs -m slow
+
+  slow-docker:
+    # Re-runs the C++ reader in the Allpix image pinned in docker-compose.yml (~8 GB) and compares it
+    # byte for byte with the committed fixture output (tests/test_mctrack_reader.py).
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Free disk space for the Allpix image
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Pull pinned Allpix image
+        run: docker compose pull allpix
+      - name: Build mctrack_depths
+        run: |
+          mkdir -p data/protocol_runs/bin && chmod -R 777 data
+          docker compose run --rm -T allpix bash -c 'cd /data/simulation/protocol_runs/tools && g++ -O2 -o /data/output/protocol_runs/bin/mctrack_depths mctrack_depths.cc $(root-config --cflags --libs) -I/usr/local/include -L/usr/local/lib -lAllpixObjects -Wl,-rpath,/usr/local/lib'
+      - name: Slow tests including the docker reader check
+        run: python -m pytest -q -rs -m slow

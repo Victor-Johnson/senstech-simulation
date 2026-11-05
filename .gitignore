@@ -33,3 +33,6 @@ notes/
 analysis/results/
 analysis/reports/
 analysis/notebooks/images/
+
+# Test fixtures (small ROOT files needed by tests)
+!tests/fixtures/*.root
