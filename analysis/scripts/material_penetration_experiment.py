@@ -223,6 +223,20 @@ def parse_args() -> argparse.Namespace:
         "analysis-level cut on measured cluster energy, so no new Allpix runs are needed.",
     )
     parser.add_argument(
+        "--eiger2-upper-kev",
+        type=float,
+        default=None,
+        help="Override EIGER2's upper counting-window edge (keV; default 80 = windowed/difference-image mode). "
+        "Use a very large value (e.g. 1e9) for counting mode: every cluster above the 4 keV lower threshold "
+        "counts ('above-80 counted' scenario). Analysis-level cut, no new Allpix runs needed.",
+    )
+    parser.add_argument(
+        "--no-upper-edges",
+        action="store_true",
+        help="Symmetric counting-mode variant: remove the upper window edge of EVERY detector (all clusters above "
+        "the lower threshold count). Analysis-level, same ROOT files.",
+    )
+    parser.add_argument(
         "--allow-missing-root",
         action="store_true",
         help="Write attenuation/spectrum outputs even if Allpix ROOT files are missing.",
@@ -1155,6 +1169,32 @@ def main() -> None:
             )
             if det.key == "medipix3"
             else det
+            for det in DETECTORS
+        ]
+
+    if args.eiger2_upper_kev is not None:
+        from dataclasses import replace
+
+        tag = "no upper edge (counting mode)" if args.eiger2_upper_kev >= 1e6 else f"upper window {args.eiger2_upper_kev:.0f} keV"
+        globals()["DETECTORS"] = [
+            replace(
+                det,
+                upper_threshold_keV=args.eiger2_upper_kev,
+                label=f"{det.label} [{tag}]",
+                note=f"WINDOW SENSITIVITY VARIANT: EIGER2 {tag} (analysis-level cut; same ROOT files as the "
+                f"standard run). {det.note}",
+            )
+            if det.key == "eiger2"
+            else det
+            for det in DETECTORS
+        ]
+
+    if args.no_upper_edges:
+        from dataclasses import replace
+
+        globals()["DETECTORS"] = [
+            replace(det, upper_threshold_keV=1e9, label=f"{det.label} [no upper edge]",
+                    note=f"WINDOW SENSITIVITY VARIANT: no upper edge for any detector. {det.note}")
             for det in DETECTORS
         ]
 

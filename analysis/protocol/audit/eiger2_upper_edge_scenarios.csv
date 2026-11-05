@@ -1,0 +1,16 @@
+integration,eiger2_scenario,detector,total,ci95,rank_real_chips
+25 ns (original),above-80 rejected (4-80 window),medipix3,81072.37477433623,546.4312248219527,1
+25 ns (original),above-80 rejected (4-80 window),timepix3_cdte,71526.92287264406,553.1319063756528,2
+25 ns (original),above-80 rejected (4-80 window),eiger2,37654.99215050671,415.5695158214986,3
+25 ns (original),above-80 counted (no upper edge),medipix3,81072.37477433623,546.4312248219527,2
+25 ns (original),above-80 counted (no upper edge),timepix3_cdte,71526.92287264406,553.1319063756528,3
+25 ns (original),above-80 counted (no upper edge),eiger2,92105.21864808846,559.1068717417111,1
+1 us (fixed),above-80 rejected (4-80 window),medipix3,84536.68213892265,540.2573602769673,1
+1 us (fixed),above-80 rejected (4-80 window),timepix3_cdte,84459.377621815,538.8048878970823,2
+1 us (fixed),above-80 rejected (4-80 window),eiger2,36636.52713328969,406.5156791983698,3
+1 us (fixed),above-80 counted (no upper edge),medipix3,84536.68213892265,540.2573602769673,2
+1 us (fixed),above-80 counted (no upper edge),timepix3_cdte,84459.377621815,538.8048878970823,3
+1 us (fixed),above-80 counted (no upper edge),eiger2,92541.71629091428,558.3945813067317,1
+1 us (fixed),symmetric: no upper edge for ANY detector,medipix3,92238.96116071047,558.4973749047049,3
+1 us (fixed),symmetric: no upper edge for ANY detector,timepix3_cdte,92668.17440455961,558.2950164945158,1
+1 us (fixed),symmetric: no upper edge for ANY detector,eiger2,92541.71629091428,558.3945813067317,2

@@ -1,0 +1,3 @@
+state,medipix3_minus_timepix3,ci95,significant
+before,9545.45190169217,777.5229831401663,True
+after,77.30451710765192,763.0129242386556,False
