@@ -56,3 +56,29 @@ Status key: ✅ runnable now · 🟡 runnable as an A-bracket · ⛔ blocked by 
 - At low flux the result is exactly the single-photon result.
 - An ideal dead time reproduces m = n/(1+nτ) and m = n·e^(−nτ).
 - Pulse width above threshold is consistent with LINDA's ~1 µs dead time (TL-04).
+
+### Exp 0 checks added 2026-11-05 (review items 1–4)
+
+| Check | Inputs | Process | Output | Status |
+|---|---|---|---|---|
+| **X0-T** transport | Stage-A geometry, G4 μ (`stagea_spike mu`) | Unscattered-primary transmission through the object vs exp(−μ_G4·ρ·t), per 1 keV bin | exp0/transport_check.csv | spike: pass (worst 3.1σ); Stage-A end-to-end run in progress |
+| **X0-D** data | XCOM 1 keV grid (reference/xcom), G4 Livermore μ/ρ | \|μ_G4/μ_XCOM − 1\| ≤ 2% on μ/ρ | exp0/data_check_summary.csv | alloys + CdTe pass; W/GOS/CsI fail below K-edges (coherent term, PH-17) |
+| **X0-B** band | X0-D | Thick-part T band from the μ/ρ difference (shared Stage A → absolute exposure time only, not rankings) | exp0/thick_part_T_band.csv | done |
+| **X0-CSA** hole tail | TransientPropagation + CSADigitizer subset | Python Ramo + trapping + CR-RC tail vs Allpix CSA amplitudes | — | REQUIRED, not built |
+| **X0-IT** integration time | config_rules.validate | every protocol config validated; earlier campaigns audited | audit/*.csv | rule live; audit re-runs in progress |
+| **X0-DR** drift | MCTrack depths | per-photon t_e, t_h vs Allpix carrier times | exp0/drift_validation_*.csv | pass |
+
+## Changes 2026-11-05 (review: FWHM breakdown, beam, audit)
+
+| Item | Decision / status | Where |
+|---|---|---|
+| Stage B illumination | Uniform flat GPS plane beam (rectangle, +z) over fiducial + 0.1 mm; pixel-level metrics scored only for photons entering the central fiducial square (LINDA 4x4, Medipix3/Timepix3 16x16, VAREX 8x8). The Allpix `beam_shape = "rectangle"` source was measured to be bell-shaped (sigma ~ size/2), not uniform. (PH-20) | `stageb.py` (`gps_macro`, `fiducial`, `load_fiducial`) |
+| Real array edges | Not in Stage B. The real arrays (LINDA 8x20 etc.) and their edge losses go in a separate system-level model (Exp 4/6b, line-level counts). | to build |
+| Exp 4 flat field / NNPS / DQE | Must use uniform illumination (GPS plane), never the Allpix `beam` source. | Exp 4 |
+| Beam audit | `audit_beam.py`: earlier campaigns (1 mm Gaussian sigma on >= 14 mm matrices) have no photons outside the matrix or within 0.5 mm of its edge; only protocol milestone 1 (LINDA 8x20, about 4.6% outside) and the 2 mm spike were affected. Bell vs flat comparison: `beam_bell_vs_flat.py`. | `audit/beam_footprint_audit.csv`, `audit/beam_bell_vs_flat.csv` |
+| X0-V1 FWHM breakdown | `exp0_v1_fwhm.py`: Stage B variants (ideal / no Fano / no trapping / base / transient mu-tau_h 1.8e-4 and 1e-5) x Stage C (full vs 2x2 summing, noise modes, dispersion 0/20/40/80 e-). Core-only Gaussian fit [mu-1 sigma, mu+3 sigma]. | `exp0/v1/fwhm_breakdown.csv` |
+| CSM noise model | 80 e- per pixel on all 4 block pixels (`noise_mode = "pixel_all"`), i.e. 160 e- effective. The earlier 175 e- per recorded pixel, then summed, double-counted the summing noise. Interpretation of D-M04 to be confirmed. | `electronics.py`, `exp0_v1.py` |
+| Fano factor | 0.24, explicit in every Stage B config (PH-19). | `stageb.py` |
+| Ballistic deficit | Not modelled in Stage B (PH-21); X0-CSA remains REQUIRED. | -- |
+| MCTrack reader | C++ (`simulation/protocol_runs/tools/mctrack_depths.cc`), about 600x faster; regression test against the Python reader. | `tests/test_mctrack_reader.py` |
+| Audit hang | `mpu_bare_timepix3_cdte_50keV` hung on its last event with 1 us integration (3.5 h); killed and logged as FAILED. Watchdog (30 min limit, SIGKILL) for the rest. | `simulation/protocol_spikes/audit_watchdog.sh`, `data/audit_itime/hung/` |
